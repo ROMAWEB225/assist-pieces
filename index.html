@@ -19,6 +19,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
     <style>
         :root {
             --bg-body: #f1f5f9;
@@ -152,27 +153,20 @@
             letter-spacing: 1px;
         }
 
+        .badge-reception.admin {
+            background: #dc2626;
+        }
+
         @media (prefers-color-scheme: dark) {
             .badge-reception {
                 background: var(--bg-soft);
                 color: var(--text-primary);
                 border: 1px solid var(--border);
             }
-        }
-
-        .logo { text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-        .logo h1 { font-size: 22px; font-weight: 600; color: var(--text-primary); }
-        .logo .subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-        .logo .badge-free {
-            display: inline-block;
-            background: var(--success);
-            color: white;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 12px;
-            border-radius: 50px;
-            margin-top: 6px;
-            letter-spacing: 0.5px;
+            .badge-reception.admin {
+                background: #7f1d1d;
+                color: #fecaca;
+            }
         }
 
         .tabs {
@@ -619,18 +613,6 @@
                 color: #bae6fd;
                 border-color: #075985;
             }
-        }
-
-        .resultats-vide {
-            text-align: center;
-            color: #0c4a6e;
-            font-style: italic;
-            font-size: 12px;
-            padding: 4px 0;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .resultats-vide { color: #7dd3fc; }
         }
 
         .demande {
@@ -1452,11 +1434,6 @@
             }
         }
 
-        .progress-bar { background: var(--bg-soft); border-radius: 60px; height: 6px; margin: 24px 0; overflow: hidden; display: none; }
-        .progress-fill { background: var(--accent); width: 0%; height: 100%; transition: width 0.3s ease; }
-        .vehicle-info { background: var(--bg-soft); border-radius: 20px; padding: 16px; margin: 16px 0; text-align: left; display: none; }
-        .vehicle-info p { margin: 6px 0; font-size: 13px; }
-
         .toast {
             position: fixed;
             bottom: 20px;
@@ -1470,17 +1447,6 @@
             z-index: 2000;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             max-width: 90vw;
-        }
-
-        .ia-diagnostic {
-            background: var(--bg-soft);
-            border-radius: 16px;
-            padding: 14px;
-            margin: 16px 0;
-            display: none;
-            font-size: 13px;
-            color: var(--text-secondary);
-            border-left: 3px solid var(--accent);
         }
 
         .modal {
@@ -2241,7 +2207,6 @@
                 <div id="trackingLastUpdate" style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;"></div>
                 <div id="suiviContact" class="suivi-contact"></div>
                 <div style="display:none;" id="trackingVehicleInfo" class="vehicle-info"></div>
-                <div style="display:none;" class="progress-bar"><div id="trackingProgressFill" class="progress-fill"></div></div>
             </div>
 
             <div class="ad-banner" style="margin-top: 20px;" onclick="ouvrirSmartlink()">
@@ -2293,11 +2258,12 @@
                 <div class="tagline">Espace vendeur</div>
                 <div class="brand-divider"></div>
             </div>
-            <span class="badge-reception">VENDEUR</span>
+            <span class="badge-reception" id="roleBadge">VENDEUR</span>
         </div>
 
         <div class="user-badge">
             Connecté : <strong id="userEmail">—</strong>
+            <span id="userNom" style="font-size: 11px; color: var(--text-muted);"></span>
             <button id="btnLogout" class="btn-secondary" style="padding: 4px 12px; font-size: 11px;">Déconnexion</button>
         </div>
 
@@ -2306,19 +2272,18 @@
             <button onclick="marquerToutVu()">Voir</button>
         </div>
 
-        <div class="garage-selector">
+        <div class="garage-selector" id="garageSelectorDiv">
             <label for="selectGarage">Vendeur :</label>
             <select id="selectGarage">
                 <option value="tous">Tous les vendeurs</option>
+                <option value="Ali">Ali Pièces</option>
                 <option value="PiecesAutoCI">Pièces Auto CI</option>
                 <option value="MomoPieces">Momo Pièces</option>
-                <option value="AKServices">AK-Services</option>
                 <option value="ClimAutoPieces">Clim Auto Pièces</option>
                 <option value="PrestigePieces">Prestige Pièces</option>
                 <option value="CIPieces">Côte d'Ivoire Pièces</option>
                 <option value="IvoiremotorPieces">Ivoiremotor Pièces</option>
                 <option value="SamPieces">Sam Pièces</option>
-                
             </select>
             <button id="btnConfigGarage" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">Infos vendeur</button>
         </div>
@@ -2620,11 +2585,24 @@
 const MAX_PHOTOS = 5;
 const DELAI_RETARD_JOURS = 3;
 const ITEMS_PER_PAGE = 10;
-const MAX_DEMANDES_CHARGEES = 50;
+const MAX_DEMANDES_CHARGEES = 200;
 const DEVISE = 'FCFA';
 const TAUX_TVA = 18;
 
-const STATUTS_AVEC_RECUPERATION = [2, 3, 4, 5]; // Disponible, Devis envoyé, Récupéré
+// ⚠️ CONFIGURATION DES ADMINS (emails qui voient TOUT)
+const ADMINS_EMAILS = [
+    'ngorantanohromaric@gmail.com'
+];
+
+// ⚠️ TABLE DE CORRESPONDANCE EMAIL → NOM VENDEUR
+// Quand tu crées un compte pour un vendeur, ajoute-le ici
+const VENDEURS_MAP = {
+    'ali@gmail.com': 'Ali',
+    // 'momo@gmail.com': 'MomoPieces',
+    // 'clim@gmail.com': 'ClimAutoPieces',
+};
+
+const STATUTS_AVEC_RECUPERATION = [2, 3, 4];
 
 const CRENEAUX = [
     { id: '08-10', label: '08h-10h' },
@@ -2678,9 +2656,6 @@ const FILTRES_LABELS = {
     'passage-aujourdhui': 'Passages aujourd\'hui'
 };
 
-// ============================================================
-// FONCTIONS GLOBALES
-// ============================================================
 function afficherToast(message) {
     const toast = document.getElementById('toast');
     if (toast) {
@@ -2783,9 +2758,6 @@ const SVG_ICONS = {
     checkCircle: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
 };
 
-// ============================================================
-// SCRIPT PRINCIPAL
-// ============================================================
 (function() {
     const firebaseConfig = {
         apiKey: "AIzaSyAxfEpi-NERVExxVYD2EmH7JppiIQDwWOM",
@@ -2808,12 +2780,13 @@ const SVG_ICONS = {
         auth = firebase.auth();
     }
 
-    // Collection séparée pour Assist-Pieces
     const COLLECTION = 'demandes_pieces';
 
+    // État global
+    let currentUser = null;       // { uid, email, role, nom }
     let mediaList = [];
     let mediaType = null;
-    let niveauUrgence = "moyenne"; // Par défaut : cette semaine
+    let niveauUrgence = "moyenne";
     let unsubscribeDashboard = null;
     let currentFiltre = "toutes";
     let allDemandes = [];
@@ -2838,53 +2811,33 @@ const SVG_ICONS = {
     const loginScreen = document.getElementById('loginScreen');
     const clientScreen = document.getElementById('clientScreen');
     const dashboardScreen = document.getElementById('dashboardScreen');
-    const toast = document.getElementById('toast');
     const previewMediaDiv = document.getElementById('previewMedia');
     const fichierMedia = document.getElementById('fichierMedia');
-    const descInput = document.getElementById('description');
     const newRequestsBanner = document.getElementById('newRequestsBanner');
 
     const garageActuel = getGarageFromURL();
-    console.log("Vendeur actuel :", garageActuel);
-
     const clientGarageName = document.getElementById('clientGarageName');
     if (clientGarageName) clientGarageName.textContent = garageActuel;
 
     document.addEventListener('click', () => {
-        if (!sonAutorise) {
-            sonAutorise = true;
-        }
+        if (!sonAutorise) sonAutorise = true;
     }, { once: true });
 
-    setTimeout(() => {
-        if (sontLibsDispo()) {
-            console.log('Bibliothèques PDF chargées');
-        } else {
-            console.warn('Bibliothèques PDF NON chargées');
-        }
-    }, 2000);
-
     // ============================================================
-    // CONFIGURATION VENDEUR
+    // CONFIGURATION VENDEUR (localStorage)
     // ============================================================
     function chargerGarageConfig() {
         try {
             const saved = localStorage.getItem('pieces_config_' + garageActuel);
-            if (saved) {
-                garageConfig = JSON.parse(saved);
-            }
-        } catch(e) {
-            console.error('Erreur chargement config:', e);
-        }
+            if (saved) garageConfig = JSON.parse(saved);
+        } catch(e) {}
     }
 
     function sauvegarderGarageConfig() {
         if (!garageConfig) return;
         try {
             localStorage.setItem('pieces_config_' + garageActuel, JSON.stringify(garageConfig));
-        } catch(e) {
-            console.error('Erreur sauvegarde config:', e);
-        }
+        } catch(e) {}
     }
 
     chargerGarageConfig();
@@ -2908,7 +2861,7 @@ const SVG_ICONS = {
     }
 
     // ============================================================
-    // AUTHENTIFICATION FIREBASE
+    // AUTHENTIFICATION + RÉCUPÉRATION DU RÔLE
     // ============================================================
     const loginEmail = document.getElementById('loginEmail');
     const loginPassword = document.getElementById('loginPassword');
@@ -2963,17 +2916,127 @@ const SVG_ICONS = {
         }
     });
 
-    auth.onAuthStateChanged((user) => {
+    // ============================================================
+    // RÉCUPÉRATION DU PROFIL UTILISATEUR (rôle + nom)
+    // ============================================================
+    async function chargerProfilUtilisateur(user) {
+        try {
+            const userRef = db.collection('users').doc(user.uid);
+            const userDoc = await userRef.get();
+
+            if (userDoc.exists) {
+                const data = userDoc.data();
+                currentUser = {
+                    uid: user.uid,
+                    email: user.email,
+                    role: data.role,
+                    nom: data.nom
+                };
+            } else {
+                // Pas de profil dans Firestore → on le crée
+                // On détermine le rôle et le nom
+
+                let role = 'vendeur';
+                let nom = null;
+
+                // Si l'email est dans la liste admin
+                if (ADMINS_EMAILS.includes(user.email)) {
+                    role = 'admin';
+                    nom = 'Admin';
+                } else if (VENDEURS_MAP[user.email]) {
+                    // Sinon, on cherche dans la table de correspondance
+                    nom = VENDEURS_MAP[user.email];
+                } else {
+                    // Fallback : on prend la partie avant @ de l'email
+                    nom = user.email.split('@')[0];
+                }
+
+                const profil = {
+                    email: user.email,
+                    nom: nom,
+                    role: role,
+                    dateCreation: new Date()
+                };
+
+                try {
+                    await userRef.set(profil);
+                } catch(e) {
+                    console.error('Impossible de créer le profil:', e);
+                }
+
+                currentUser = {
+                    uid: user.uid,
+                    email: user.email,
+                    role: role,
+                    nom: nom
+                };
+            }
+
+            return currentUser;
+        } catch (err) {
+            console.error('Erreur chargement profil:', err);
+            // Fallback minimal
+            currentUser = {
+                uid: user.uid,
+                email: user.email,
+                role: ADMINS_EMAILS.includes(user.email) ? 'admin' : 'vendeur',
+                nom: VENDEURS_MAP[user.email] || user.email.split('@')[0]
+            };
+            return currentUser;
+        }
+    }
+
+    // ============================================================
+    // APPLICATION DE L'INTERFACE SELON LE RÔLE
+    // ============================================================
+    function appliquerRoleUI() {
+        const roleBadge = document.getElementById('roleBadge');
+        const userNomSpan = document.getElementById('userNom');
+        const garageSelectorDiv = document.getElementById('garageSelectorDiv');
+
+        if (!currentUser) return;
+
+        if (currentUser.role === 'admin') {
+            roleBadge.textContent = 'ADMIN';
+            roleBadge.classList.add('admin');
+            userNomSpan.textContent = '— Admin';
+            garageSelectorDiv.style.display = 'flex';
+        } else {
+            roleBadge.textContent = 'VENDEUR';
+            roleBadge.classList.remove('admin');
+            userNomSpan.textContent = `— ${currentUser.nom}`;
+            garageSelectorDiv.style.display = 'none';
+        }
+    }
+
+    // ============================================================
+    // AUTH STATE
+    // ============================================================
+    auth.onAuthStateChanged(async (user) => {
         if (user) {
             console.log("Connecté :", user.email);
             document.getElementById('userEmail').textContent = user.email;
+
+            // 1. Charger le profil (rôle + nom)
+            await chargerProfilUtilisateur(user);
+
+            // 2. Adapter l'interface
+            appliquerRoleUI();
+
+            // 3. Afficher le dashboard
             afficherEcran('dashboard');
             premiereChargeEffectuee = false;
             nouvellesDemandesIds.clear();
+
+            // 4. Charger les demandes selon le rôle
             chargerDemandesRealtime();
-            chargerTotalGlobal();
+
+            if (currentUser.role === 'admin') {
+                chargerTotalGlobal();
+            }
         } else {
             console.log("Non connecté");
+            currentUser = null;
             afficherEcran('client');
             if (unsubscribeDashboard) { unsubscribeDashboard(); unsubscribeDashboard = null; }
             if (trackingUnsubscribe) { trackingUnsubscribe(); trackingUnsubscribe = null; }
@@ -3010,11 +3073,7 @@ const SVG_ICONS = {
     function demanderPermissionNotification() {
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    afficherToast('Notifications activées');
-                } else {
-                    afficherToast('Notifications refusées');
-                }
+                afficherToast(permission === 'granted' ? 'Notifications activées' : 'Notifications refusées');
             });
         } else if (Notification.permission === 'granted') {
             afficherToast('Notifications déjà activées');
@@ -3391,11 +3450,7 @@ const SVG_ICONS = {
             afficherDetailsSuivi(currentTrackingDemande);
         }, function(error) {
             if (trackingError) {
-                if (error.code === 'permission-denied') {
-                    trackingError.textContent = 'Accès refusé';
-                } else {
-                    trackingError.textContent = 'Erreur: ' + error.message;
-                }
+                trackingError.textContent = error.code === 'permission-denied' ? 'Accès refusé' : 'Erreur: ' + error.message;
             }
         });
     }
@@ -3410,9 +3465,7 @@ const SVG_ICONS = {
 
         const suiviHeader = document.getElementById('suiviHeaderGarage');
         if (suiviHeader) {
-            const logoHtml = garageConfig?.logo
-                ? `<img src="${garageConfig.logo}" alt="Logo">`
-                : 'AP';
+            const logoHtml = garageConfig?.logo ? `<img src="${garageConfig.logo}" alt="Logo">` : 'AP';
             const nom = garageConfig?.nom || `Vendeur ${data.garage || 'Standard'}`;
             const tel = garageConfig?.tel || '';
             const email = garageConfig?.email || '';
@@ -3492,7 +3545,6 @@ const SVG_ICONS = {
         const trackingSteps = document.getElementById('trackingSteps');
         if (trackingSteps) {
             const progressPercent = statut / (STATUTS.length - 1);
-
             let stepsHtml = `<div class="timeline-v-progress" style="height: ${progressPercent * 100}%; max-height: calc(100% - 24px);"></div>`;
 
             STATUTS.forEach(s => {
@@ -3733,7 +3785,6 @@ const SVG_ICONS = {
             await docRef.update({ recuperation, historique });
             afficherToast('Passage enregistré ! Le vendeur est prévenu');
         } catch(err) {
-            console.error('Erreur confirmation:', err);
             afficherToast('Erreur: ' + err.message);
             if (btn) {
                 btn.disabled = false;
@@ -4457,7 +4508,6 @@ const SVG_ICONS = {
 
         btn.disabled = true;
         btn.textContent = 'Génération...';
-        afficherToast('Création du PDF...');
 
         try {
             const html2canvas = window.html2canvas;
@@ -4483,9 +4533,7 @@ const SVG_ICONS = {
                 useCORS: true,
                 backgroundColor: '#ffffff',
                 logging: false,
-                windowWidth: 820,
-                scrollX: 0,
-                scrollY: 0
+                windowWidth: 820
             });
 
             if (container.parentNode) document.body.removeChild(container);
@@ -4655,273 +4703,7 @@ ${garageNom}`;
     });
 
     // ============================================================
-    // PDF BON DE COMMANDE
-    // ============================================================
-    function genererQRCodeBase64(texte, callback) {
-        try {
-            const tempDiv = document.createElement('div');
-            tempDiv.style.position = 'fixed';
-            tempDiv.style.left = '-9999px';
-            document.body.appendChild(tempDiv);
-
-            new QRCode(tempDiv, {
-                text: texte,
-                width: 200,
-                height: 200,
-                colorDark: "#0f172a",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
-            });
-
-            setTimeout(() => {
-                const canvasQR = tempDiv.querySelector('canvas');
-                const imgQR = tempDiv.querySelector('img');
-
-                if (canvasQR) {
-                    const dataUrl = canvasQR.toDataURL('image/png');
-                    document.body.removeChild(tempDiv);
-                    callback(dataUrl);
-                } else if (imgQR && imgQR.src) {
-                    const dataUrl = imgQR.src;
-                    document.body.removeChild(tempDiv);
-                    callback(dataUrl);
-                } else {
-                    document.body.removeChild(tempDiv);
-                    callback(null);
-                }
-            }, 150);
-        } catch(e) {
-            console.error('Erreur génération QR:', e);
-            callback(null);
-        }
-    }
-
-    function buildPdfHtml(demande, id, qrImageBase64) {
-        const dateReception = demande.date || new Date().toLocaleString('fr-FR');
-        const statutInfo = STATUTS.find(s => s.id === (demande.statut || 0)) || STATUTS[0];
-        const urgenceColor = demande.urgence === 'haute' ? '#ef4444' : demande.urgence === 'moyenne' ? '#f59e0b' : '#22c55e';
-        const urgenceLabel = demande.urgence === 'haute' ? "Aujourd'hui" : demande.urgence === 'moyenne' ? 'Cette semaine' : 'Pas pressé';
-
-        const qrBlockHtml = qrImageBase64 ? `
-            <div style="margin-top: 25px; padding-top: 18px; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 18px;">
-                <div style="flex-shrink: 0; width: 100px; height: 100px; background: white; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                    <img src="${qrImageBase64}" style="width: 100%; height: 100%; display: block;" alt="QR Code suivi">
-                </div>
-                <div style="font-size: 11px; color: #475569; line-height: 1.6;">
-                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 4px;">Suivi en ligne</strong>
-                    Scannez ce QR code avec votre téléphone pour suivre<br>
-                    l'avancement de votre demande en temps réel.<br>
-                    <span style="font-size: 10px; color: #94a3b8; margin-top: 4px; display: block;">
-                        N° de suivi : <strong style="color: #0f172a;">${id}</strong>
-                    </span>
-                </div>
-            </div>
-        ` : '';
-
-        return `
-            <div style="font-family: 'Georgia', 'Times New Roman', serif; width: 780px; padding: 30px 40px; background: white; color: #1a1a1a; line-height: 1.5; box-sizing: border-box;">
-                <div style="text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #0f172a;">
-                    <div style="font-size: 26px; font-weight: 300; letter-spacing: 5px; color: #0f172a;">ASSIST-PIECES</div>
-                    <div style="font-size: 11px; color: #64748b; letter-spacing: 3px; margin-top: 6px; text-transform: uppercase;">Bon de Commande</div>
-                    <div style="font-size: 9px; color: #94a3b8; margin-top: 6px; font-style: italic; letter-spacing: 1px;">Document confidentiel</div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; margin-bottom: 22px; padding: 14px 18px; background: #f8fafc; border-left: 4px solid #0f172a; font-size: 12px;">
-                    <div>
-                        <div style="font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">N° de commande</div>
-                        <div style="color: #0f172a; font-weight: 600; font-size: 15px; margin-top: 2px;">${id}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Date de demande</div>
-                        <div style="color: #0f172a; margin-top: 2px;">${dateReception}</div>
-                    </div>
-                </div>
-
-                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
-                    Pièce recherchée
-                </div>
-                <div style="font-size: 13px;">
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Désignation :</strong> <span style="color: #0f172a;">${demande.pieceRecherchee || '-'}</span></div>
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Quantité :</strong> <span style="color: #0f172a;">${demande.quantite || '1'}</span></div>
-                </div>
-
-                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
-                    Véhicule
-                </div>
-                <div style="font-size: 13px;">
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Marque / Modèle :</strong> <span style="color: #0f172a;">${demande.marque || '-'} ${demande.modele || ''}</span></div>
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Année :</strong> <span style="color: #0f172a;">${demande.annee || '-'}</span></div>
-                    ${demande.immatriculation ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Immatriculation :</strong> <span style="color: #0f172a;">${demande.immatriculation}</span></div>` : ''}
-                </div>
-
-                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
-                    Client
-                </div>
-                <div style="font-size: 13px;">
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Nom :</strong> <span style="color: #0f172a;">${demande.nom || '-'}</span></div>
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Téléphone :</strong> <span style="color: #0f172a;">${demande.telephone || '-'}</span></div>
-                    ${demande.email ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Email :</strong> <span style="color: #0f172a;">${demande.email}</span></div>` : ''}
-                </div>
-
-                ${demande.description ? `
-                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
-                    Description
-                </div>
-                <div style="padding: 12px 14px; border: 1px solid #e2e8f0; border-left: 4px solid ${urgenceColor}; border-radius: 4px; font-size: 13px; line-height: 1.5; background: #f8fafc; margin-bottom: 12px; color: #0f172a;">
-                    ${demande.description}
-                </div>` : ''}
-
-                <div style="font-size: 13px;">
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Urgence :</strong> <span style="color: ${urgenceColor}; font-weight: 700;">${urgenceLabel}</span></div>
-                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Statut actuel :</strong> <span style="color: #0f172a;">${statutInfo.label}</span></div>
-                    ${demande.lieu ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Lieu :</strong> <span style="color: #0f172a;">${demande.lieu}</span></div>` : ''}
-                    ${demande.garage ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Vendeur :</strong> <span style="color: #0f172a;">${demande.garage}</span></div>` : ''}
-                </div>
-
-                <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #cbd5e1;">
-                    <div style="display: flex; justify-content: space-between; gap: 40px;">
-                        <div style="flex: 1;">
-                            <div style="font-size: 12px; color: #64748b; margin-bottom: 45px;">Signature du client</div>
-                            <div style="border-top: 1px solid #0f172a; padding-top: 4px; font-size: 10px; color: #94a3b8; text-align: center;">Lu et approuvé</div>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-size: 12px; color: #64748b; margin-bottom: 45px;">Signature du vendeur</div>
-                            <div style="border-top: 1px solid #0f172a; padding-top: 4px; font-size: 10px; color: #94a3b8; text-align: center;">Cachet et signature</div>
-                        </div>
-                    </div>
-                </div>
-
-                ${qrBlockHtml}
-
-                <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-                    <div style="font-size: 9px; color: #94a3b8; letter-spacing: 2px;">ASSIST-PIECES — SOLUTION DE GESTION POUR VENDEURS DE PIÈCES</div>
-                </div>
-            </div>
-        `;
-    }
-
-    async function genererPDF(demande, id) {
-        const pdfContent = document.getElementById('pdfContent');
-        const trackingUrl = `${window.location.origin}${window.location.pathname}?suivi=${id}`;
-
-        afficherToast('Préparation du PDF...');
-
-        genererQRCodeBase64(trackingUrl, (qrBase64) => {
-            pdfContent.innerHTML = buildPdfHtml(demande, id, qrBase64);
-            document.getElementById('pdfModal').style.display = 'flex';
-
-            document.getElementById('btnGenererPDF').onclick = async function() {
-                const btn = this;
-
-                if (!sontLibsDispo()) {
-                    afficherToast('Impression manuelle');
-                    imprimerFichePDF(buildPdfHtml(demande, id, qrBase64), id);
-                    return;
-                }
-
-                btn.disabled = true;
-                btn.textContent = 'Génération...';
-
-                try {
-                    const html2canvas = window.html2canvas;
-                    const jspdfModule = window.jspdf;
-                    const jsPDF = jspdfModule ? jspdfModule.jsPDF : window.jsPDF;
-
-                    const container = document.createElement('div');
-                    container.style.position = 'fixed';
-                    container.style.top = '0';
-                    container.style.left = '0';
-                    container.style.width = '820px';
-                    container.style.background = 'white';
-                    container.style.zIndex = '99999';
-                    container.style.opacity = '1';
-                    container.style.pointerEvents = 'none';
-                    container.innerHTML = buildPdfHtml(demande, id, qrBase64);
-                    document.body.appendChild(container);
-
-                    await new Promise(r => setTimeout(r, 400));
-
-                    const canvas = await html2canvas(container, {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#ffffff',
-                        logging: false,
-                        windowWidth: 820,
-                        scrollX: 0,
-                        scrollY: 0
-                    });
-
-                    if (container.parentNode) document.body.removeChild(container);
-
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = pdf.internal.pageSize.getHeight();
-                    const imgWidth = pdfWidth - 20;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-                    let heightLeft = imgHeight;
-                    let position = 10;
-                    let page = 1;
-
-                    pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= (pdfHeight - 20);
-
-                    while (heightLeft > 0) {
-                        page++;
-                        position = -(page - 1) * (pdfHeight - 20) + 10;
-                        pdf.addPage();
-                        pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-                        heightLeft -= (pdfHeight - 20);
-                    }
-
-                    pdf.save(`Bon_commande_${id}.pdf`);
-                    btn.disabled = false;
-                    btn.textContent = 'Télécharger PDF';
-                    afficherToast('PDF téléchargé !');
-                } catch(err) {
-                    console.error('Erreur PDF:', err);
-                    btn.disabled = false;
-                    btn.textContent = 'Télécharger PDF';
-                    afficherToast('Impression manuelle');
-                    imprimerFichePDF(buildPdfHtml(demande, id, qrBase64), id);
-                }
-            };
-
-            document.getElementById('btnImprimerPDF').onclick = function() {
-                imprimerFichePDF(buildPdfHtml(demande, id, qrBase64), id);
-            };
-        });
-    }
-
-    function imprimerFichePDF(html, id) {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            afficherToast('Autorisez les popups');
-            return;
-        }
-        printWindow.document.write(`
-            <html><head><title>Bon de commande ${id}</title>
-            <style>
-                @page { size: A4; margin: 10mm; }
-                body { font-family: 'Georgia', serif; padding: 0; margin: 0; color: #1a1a1a; }
-                @media print { .no-print { display: none; } }
-                .print-banner { background: #fef3c7; color: #92400e; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; font-size: 13px; text-align: center; border-left: 4px solid #f59e0b; }
-            </style>
-            </head><body>
-            <div class="print-banner no-print">
-                <strong>Astuce :</strong> Choisissez <strong>"Enregistrer en PDF"</strong> comme destination.
-            </div>
-            ${html}
-            </body></html>
-        `);
-        printWindow.document.close();
-        setTimeout(() => printWindow.print(), 800);
-    }
-
-    // ============================================================
-    // CHARGEMENT TOTAL GLOBAL
+    // CHARGEMENT TOTAL GLOBAL (ADMIN UNIQUEMENT)
     // ============================================================
     async function chargerTotalGlobal() {
         const totalBadge = document.getElementById('totalBadge');
@@ -4942,7 +4724,6 @@ ${garageNom}`;
 
             const suffixe = snapshot.size >= 10000 ? '+' : '';
             totalBadge.textContent = `Total : ${totalGlobalDemandes}${suffixe}`;
-            console.log('✅ Total global :', totalGlobalDemandes);
         } catch(err) {
             console.error('❌ Erreur total global :', err);
             totalBadge.textContent = `Total : ${allDemandes.length}`;
@@ -4955,11 +4736,21 @@ ${garageNom}`;
     function chargerDemandesRealtime() {
         if (unsubscribeDashboard) { unsubscribeDashboard(); unsubscribeDashboard = null; }
 
-        const garageFiltre = document.getElementById('selectGarage')?.value || 'tous';
-        let query = db.collection(COLLECTION).limit(MAX_DEMANDES_CHARGEES);
+        if (!currentUser) return;
 
-        if (garageFiltre !== 'tous') {
-            query = query.where('garage', '==', garageFiltre).limit(MAX_DEMANDES_CHARGEES);
+        let query;
+
+        if (currentUser.role === 'admin') {
+            // ADMIN : peut filtrer par vendeur
+            const garageFiltre = document.getElementById('selectGarage')?.value || 'tous';
+            if (garageFiltre === 'tous') {
+                query = db.collection(COLLECTION).limit(MAX_DEMANDES_CHARGEES);
+            } else {
+                query = db.collection(COLLECTION).where('garage', '==', garageFiltre).limit(MAX_DEMANDES_CHARGEES);
+            }
+        } else {
+            // VENDEUR : voit seulement ses demandes
+            query = db.collection(COLLECTION).where('garage', '==', currentUser.nom).limit(MAX_DEMANDES_CHARGEES);
         }
 
         unsubscribeDashboard = query.onSnapshot(function(snapshot) {
@@ -4975,7 +4766,6 @@ ${garageNom}`;
             if (!premiereChargeEffectuee) {
                 snapshot.forEach(doc => { nouvellesDemandesIds.add(doc.id); });
                 premiereChargeEffectuee = true;
-                console.log('Premier chargement :', demandes.length);
             } else {
                 const nouvelles = [];
                 snapshot.docChanges().forEach(change => {
@@ -5411,6 +5201,269 @@ ${garageNom}`;
     });
 
     // ============================================================
+    // PDF BON DE COMMANDE
+    // ============================================================
+    function genererQRCodeBase64(texte, callback) {
+        try {
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.left = '-9999px';
+            document.body.appendChild(tempDiv);
+
+            new QRCode(tempDiv, {
+                text: texte,
+                width: 200,
+                height: 200,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            setTimeout(() => {
+                const canvasQR = tempDiv.querySelector('canvas');
+                const imgQR = tempDiv.querySelector('img');
+
+                if (canvasQR) {
+                    const dataUrl = canvasQR.toDataURL('image/png');
+                    document.body.removeChild(tempDiv);
+                    callback(dataUrl);
+                } else if (imgQR && imgQR.src) {
+                    const dataUrl = imgQR.src;
+                    document.body.removeChild(tempDiv);
+                    callback(dataUrl);
+                } else {
+                    document.body.removeChild(tempDiv);
+                    callback(null);
+                }
+            }, 150);
+        } catch(e) {
+            callback(null);
+        }
+    }
+
+    function buildPdfHtml(demande, id, qrImageBase64) {
+        const dateReception = demande.date || new Date().toLocaleString('fr-FR');
+        const statutInfo = STATUTS.find(s => s.id === (demande.statut || 0)) || STATUTS[0];
+        const urgenceColor = demande.urgence === 'haute' ? '#ef4444' : demande.urgence === 'moyenne' ? '#f59e0b' : '#22c55e';
+        const urgenceLabel = demande.urgence === 'haute' ? "Aujourd'hui" : demande.urgence === 'moyenne' ? 'Cette semaine' : 'Pas pressé';
+
+        const qrBlockHtml = qrImageBase64 ? `
+            <div style="margin-top: 25px; padding-top: 18px; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 18px;">
+                <div style="flex-shrink: 0; width: 100px; height: 100px; background: white; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <img src="${qrImageBase64}" style="width: 100%; height: 100%; display: block;" alt="QR Code suivi">
+                </div>
+                <div style="font-size: 11px; color: #475569; line-height: 1.6;">
+                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 4px;">Suivi en ligne</strong>
+                    Scannez ce QR code avec votre téléphone pour suivre<br>
+                    l'avancement de votre demande en temps réel.<br>
+                    <span style="font-size: 10px; color: #94a3b8; margin-top: 4px; display: block;">
+                        N° de suivi : <strong style="color: #0f172a;">${id}</strong>
+                    </span>
+                </div>
+            </div>
+        ` : '';
+
+        return `
+            <div style="font-family: 'Georgia', 'Times New Roman', serif; width: 780px; padding: 30px 40px; background: white; color: #1a1a1a; line-height: 1.5; box-sizing: border-box;">
+                <div style="text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #0f172a;">
+                    <div style="font-size: 26px; font-weight: 300; letter-spacing: 5px; color: #0f172a;">ASSIST-PIECES</div>
+                    <div style="font-size: 11px; color: #64748b; letter-spacing: 3px; margin-top: 6px; text-transform: uppercase;">Bon de Commande</div>
+                    <div style="font-size: 9px; color: #94a3b8; margin-top: 6px; font-style: italic; letter-spacing: 1px;">Document confidentiel</div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 22px; padding: 14px 18px; background: #f8fafc; border-left: 4px solid #0f172a; font-size: 12px;">
+                    <div>
+                        <div style="font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">N° de commande</div>
+                        <div style="color: #0f172a; font-weight: 600; font-size: 15px; margin-top: 2px;">${id}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Date de demande</div>
+                        <div style="color: #0f172a; margin-top: 2px;">${dateReception}</div>
+                    </div>
+                </div>
+
+                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
+                    Pièce recherchée
+                </div>
+                <div style="font-size: 13px;">
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Désignation :</strong> <span style="color: #0f172a;">${demande.pieceRecherchee || '-'}</span></div>
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Quantité :</strong> <span style="color: #0f172a;">${demande.quantite || '1'}</span></div>
+                </div>
+
+                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
+                    Véhicule
+                </div>
+                <div style="font-size: 13px;">
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Marque / Modèle :</strong> <span style="color: #0f172a;">${demande.marque || '-'} ${demande.modele || ''}</span></div>
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Année :</strong> <span style="color: #0f172a;">${demande.annee || '-'}</span></div>
+                    ${demande.immatriculation ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Immatriculation :</strong> <span style="color: #0f172a;">${demande.immatriculation}</span></div>` : ''}
+                </div>
+
+                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
+                    Client
+                </div>
+                <div style="font-size: 13px;">
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Nom :</strong> <span style="color: #0f172a;">${demande.nom || '-'}</span></div>
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Téléphone :</strong> <span style="color: #0f172a;">${demande.telephone || '-'}</span></div>
+                    ${demande.email ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Email :</strong> <span style="color: #0f172a;">${demande.email}</span></div>` : ''}
+                </div>
+
+                ${demande.description ? `
+                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 12px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;">
+                    Description
+                </div>
+                <div style="padding: 12px 14px; border: 1px solid #e2e8f0; border-left: 4px solid ${urgenceColor}; border-radius: 4px; font-size: 13px; line-height: 1.5; background: #f8fafc; margin-bottom: 12px; color: #0f172a;">
+                    ${demande.description}
+                </div>` : ''}
+
+                <div style="font-size: 13px;">
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Urgence :</strong> <span style="color: ${urgenceColor}; font-weight: 700;">${urgenceLabel}</span></div>
+                    <div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Statut actuel :</strong> <span style="color: #0f172a;">${statutInfo.label}</span></div>
+                    ${demande.lieu ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Lieu :</strong> <span style="color: #0f172a;">${demande.lieu}</span></div>` : ''}
+                    ${demande.garage ? `<div style="margin-bottom: 6px;"><strong style="display: inline-block; min-width: 150px; color: #475569;">Vendeur :</strong> <span style="color: #0f172a;">${demande.garage}</span></div>` : ''}
+                </div>
+
+                <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #cbd5e1;">
+                    <div style="display: flex; justify-content: space-between; gap: 40px;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 45px;">Signature du client</div>
+                            <div style="border-top: 1px solid #0f172a; padding-top: 4px; font-size: 10px; color: #94a3b8; text-align: center;">Lu et approuvé</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 45px;">Signature du vendeur</div>
+                            <div style="border-top: 1px solid #0f172a; padding-top: 4px; font-size: 10px; color: #94a3b8; text-align: center;">Cachet et signature</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${qrBlockHtml}
+
+                <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                    <div style="font-size: 9px; color: #94a3b8; letter-spacing: 2px;">ASSIST-PIECES — SOLUTION DE GESTION POUR VENDEURS DE PIÈCES</div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function genererPDF(demande, id) {
+        const pdfContent = document.getElementById('pdfContent');
+        const trackingUrl = `${window.location.origin}${window.location.pathname}?suivi=${id}`;
+
+        afficherToast('Préparation du PDF...');
+
+        genererQRCodeBase64(trackingUrl, (qrBase64) => {
+            pdfContent.innerHTML = buildPdfHtml(demande, id, qrBase64);
+            document.getElementById('pdfModal').style.display = 'flex';
+
+            document.getElementById('btnGenererPDF').onclick = async function() {
+                const btn = this;
+
+                if (!sontLibsDispo()) {
+                    afficherToast('Impression manuelle');
+                    imprimerFichePDF(buildPdfHtml(demande, id, qrBase64), id);
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'Génération...';
+
+                try {
+                    const html2canvas = window.html2canvas;
+                    const jspdfModule = window.jspdf;
+                    const jsPDF = jspdfModule ? jspdfModule.jsPDF : window.jsPDF;
+
+                    const container = document.createElement('div');
+                    container.style.position = 'fixed';
+                    container.style.top = '0';
+                    container.style.left = '0';
+                    container.style.width = '820px';
+                    container.style.background = 'white';
+                    container.style.zIndex = '99999';
+                    container.style.opacity = '1';
+                    container.style.pointerEvents = 'none';
+                    container.innerHTML = buildPdfHtml(demande, id, qrBase64);
+                    document.body.appendChild(container);
+
+                    await new Promise(r => setTimeout(r, 400));
+
+                    const canvas = await html2canvas(container, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        windowWidth: 820
+                    });
+
+                    if (container.parentNode) document.body.removeChild(container);
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = pdfWidth - 20;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                    let heightLeft = imgHeight;
+                    let position = 10;
+                    let page = 1;
+
+                    pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
+                    heightLeft -= (pdfHeight - 20);
+
+                    while (heightLeft > 0) {
+                        page++;
+                        position = -(page - 1) * (pdfHeight - 20) + 10;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
+                        heightLeft -= (pdfHeight - 20);
+                    }
+
+                    pdf.save(`Bon_commande_${id}.pdf`);
+                    btn.disabled = false;
+                    btn.textContent = 'Télécharger PDF';
+                    afficherToast('PDF téléchargé !');
+                } catch(err) {
+                    console.error('Erreur PDF:', err);
+                    btn.disabled = false;
+                    btn.textContent = 'Télécharger PDF';
+                    afficherToast('Impression manuelle');
+                    imprimerFichePDF(buildPdfHtml(demande, id, qrBase64), id);
+                }
+            };
+
+            document.getElementById('btnImprimerPDF').onclick = function() {
+                imprimerFichePDF(buildPdfHtml(demande, id, qrBase64), id);
+            };
+        });
+    }
+
+    function imprimerFichePDF(html, id) {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            afficherToast('Autorisez les popups');
+            return;
+        }
+        printWindow.document.write(`
+            <html><head><title>Bon de commande ${id}</title>
+            <style>
+                @page { size: A4; margin: 10mm; }
+                body { font-family: 'Georgia', serif; padding: 0; margin: 0; color: #1a1a1a; }
+                @media print { .no-print { display: none; } }
+                .print-banner { background: #fef3c7; color: #92400e; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; font-size: 13px; text-align: center; border-left: 4px solid #f59e0b; }
+            </style>
+            </head><body>
+            <div class="print-banner no-print">
+                <strong>Astuce :</strong> Choisissez <strong>"Enregistrer en PDF"</strong> comme destination.
+            </div>
+            ${html}
+            </body></html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => printWindow.print(), 800);
+    }
+
+    // ============================================================
     // EXPORT CSV
     // ============================================================
     document.getElementById('btnExportExcel')?.addEventListener('click', function() {
@@ -5454,9 +5507,7 @@ ${garageNom}`;
         afficherToast('Export CSV réussi');
     });
 
-    document.getElementById('btnActiverNotifs')?.addEventListener('click', function() {
-        demanderPermissionNotification();
-    });
+    document.getElementById('btnActiverNotifs')?.addEventListener('click', demanderPermissionNotification);
 
     // ============================================================
     // NAVIGATION
@@ -5464,9 +5515,6 @@ ${garageNom}`;
     document.getElementById('btnAllerDashboard')?.addEventListener('click', function() {
         if (auth.currentUser) {
             afficherEcran('dashboard');
-            premiereChargeEffectuee = false;
-            chargerDemandesRealtime();
-            chargerTotalGlobal();
         } else {
             afficherEcran('login');
             setTimeout(() => loginEmail?.focus(), 300);
@@ -5501,9 +5549,12 @@ ${garageNom}`;
         appliquerFiltresEtAfficher();
     });
     document.getElementById('selectGarage')?.addEventListener('change', () => {
-        premiereChargeEffectuee = false;
-        chargerDemandesRealtime();
-        chargerTotalGlobal();
+        // Seul l'admin peut changer le filtre
+        if (currentUser && currentUser.role === 'admin') {
+            premiereChargeEffectuee = false;
+            chargerDemandesRealtime();
+            chargerTotalGlobal();
+        }
     });
 
     // ============================================================
@@ -5529,7 +5580,7 @@ ${garageNom}`;
         }, 500);
     }
 
-    console.log('Assist-Pieces 1.0 — Prêt pour les vendeurs de pièces');
+    console.log('Assist-Pieces 2.0 — Rôles admin/vendeur activés');
 })();
 </script>
 
@@ -5567,7 +5618,7 @@ ${garageNom}`;
             });
         }
         window.addEventListener('appinstalled', () => {
-            if (btnInstall) btnInstall.style.display = 'none';
+            if (btnInstall) btnInstaller.style.display = 'none';
         });
     })();
 </script>
